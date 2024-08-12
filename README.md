@@ -1,11 +1,13 @@
-# Application Template
+# Proposed Building View Impact 
 
-Simple application template that uses the ArcGIS Maps SDK for JavaScript and Calcite Components.
+Interactively visualize the impact on views for proposed new or updated buildings
+
+### APIs and SDKs Used
+
+Uses the ArcGIS Maps SDK for JavaScript and Calcite Components.
 
 - [ArcGIS Maps SDK for Javascript](https://developers.arcgis.com/javascript/latest/api-reference/)
 - [Calcite Components](https://developers.arcgis.com/calcite-design-system/components/)
-
-> *WARNING*: this is a new and evolving effort... things might not work as expected.
 
 ### Deploy
 
