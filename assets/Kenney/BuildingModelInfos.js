@@ -36,12 +36,31 @@ class BuildingModelInfos {
   ];
 
   /**
+   *
+   * @type {string}
+   */
+  MODEL_BASE_URL = './assets/Kenney/Models/GLTF_format/';
+
+  /**
+   *
+   * @type {string}
+   */
+  THUMBNAIL_BASE_URL = './assets/Kenney/Isometric/';
+
+  /**
    * @type {Map<string, ModelInfo>}
    */
   modelInfos;
 
+  /**
+   *
+   */
   constructor() {
 
+    /**
+     *
+     * @type {Map<string, {thumb: string, model: string}>}
+     */
     this.modelInfos = new Map(BuildingModelInfos.MODEL_INFOS);
 
   }

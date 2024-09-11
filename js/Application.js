@@ -23,7 +23,7 @@ import SignIn from './apl/SignIn.js';
 import ViewLoading from './apl/ViewLoading.js';
 import MapScale from './apl/MapScale.js';
 
-import BuildingModelInfos from '../assets/Kenney/BuildingModelInfos.js';
+import buildingModelInfos from '../assets/Kenney/BuildingModelInfos.js';
 
 class Application extends AppBase {
 
@@ -189,9 +189,7 @@ class Application extends AppBase {
       this.configView({view}).then(async () => {
 
         const {existingView, proposedView} = await this.initializeImpactViews({view});
-        //await this.initializeObstructions({view, existingView, proposedView});
         await this.initializeAnalysis({view, existingView, proposedView});
-
         await this.initializeBuildingModelPlacement({view, existingView, proposedView});
         await this.initializeBuildingModelsList({view});
 
@@ -210,254 +208,21 @@ class Application extends AppBase {
     const SceneView = await $arcgis.import("esri/views/SceneView");
 
     const existingView = new SceneView({
-      container: 'existing-view-container', ui: {components: []}, map: view.map
+      container: 'existing-view-container',
+      ui: {components: []},
+      map: view.map
     });
     await existingView.when();
 
     const proposedView = new SceneView({
-      container: 'proposed-view-container', ui: {components: []}, map: view.map
+      container: 'proposed-view-container',
+      ui: {components: []},
+      map: view.map
     });
     await proposedView.when();
 
     return {existingView, proposedView};
   }
-
-  /**
-   *
-   * @param view
-   * @return {Promise<void>}
-   */
-  async initializeBuildingModelsList({view}) {
-
-    const modelsList = document.getElementById('models-list');
-
-    const modelSelected = ({model}) => {
-      const modelUrl = `./assets/Kenney/Models/GLTF_format/${ model }`;
-      this.dispatchEvent(new CustomEvent('model-selected', {detail: {modelUrl}}));
-    };
-
-    const {modelInfos} = BuildingModelInfos;
-    modelInfos.forEach(({thumb, model}, key) => {
-
-      const modelCard = document.createElement('calcite-card');
-      modelCard.setAttribute('thumbnail-position', 'block-end');
-
-      const heading = document.createElement('div');
-      heading.innerText = key;
-      heading.setAttribute('slot', 'heading');
-      modelCard.appendChild(heading);
-
-      const thumbnail = document.createElement('img');
-      thumbnail.setAttribute('slot', 'thumbnail');
-      thumbnail.setAttribute('src', `./assets/Kenney/Isometric/${ thumb }`);
-      modelCard.append(thumbnail);
-
-      modelCard.addEventListener('calciteCardSelect', () => {
-        modelSelected({model});
-      });
-
-      if (key.includes('01')) {
-        modelCard.toggleAttribute('selected', true);
-        modelSelected({model});
-      }
-
-      modelsList.append(modelCard);
-    });
-
-  }
-
-  /**
-   *
-   * @param view
-   * @param existingView
-   * @param proposedView
-   * @return {Promise<void>}
-   */
-  async initializeBuildingModelPlacement({view, existingView, proposedView}) {
-
-    const initialSize = 10.0;
-
-    const buildingsLayer = view.map.layers.find(l => l.title === 'Buildings');
-    await buildingsLayer.load();
-
-    const SceneFilter = await $arcgis.import("esri/layers/support/SceneFilter");
-    const geometryEngine = await $arcgis.import("esri/geometry/geometryEngine");
-
-    const updateBuildingsFilter = () => {
-
-      const sketchAreas = sketchLayer.graphics.map((graphic) => {
-        const location = graphic.geometry;
-        const symbolLayer = graphic.symbol.symbolLayers.at(0);
-        const {width, depth} = symbolLayer;
-        const distance = (width && depth) ? Math.max(width, depth) : initialSize;
-        return geometryEngine.geodesicBuffer(location, distance * 0.5, 'meters');
-      });
-
-      buildingsLayer.filter = new SceneFilter({
-        geometries: sketchAreas, spatialRelationship: 'disjoint'
-      });
-    };
-
-    const GraphicsLayer = await $arcgis.import("esri/layers/GraphicsLayer");
-    const sketchLayer = new GraphicsLayer({
-      elevationInfo: {mode: 'relative-to-ground'}
-    });
-    view.map.add(sketchLayer);
-
-    sketchLayer.on('layerview-create', (evt) => {
-      evt.layerView.visible = (evt.view !== existingView);
-    });
-
-    const SketchViewModel = await $arcgis.import("esri/widgets/Sketch/SketchViewModel");
-    const sketchViewModel = new SketchViewModel({
-      view: view,
-      layer: sketchLayer
-    });
-
-    const ObjectSymbol3DLayer = await $arcgis.import("esri/symbols/ObjectSymbol3DLayer");
-
-    this.addEventListener('model-selected', ({detail: {modelUrl}}) => {
-
-      let buildingSymbolLayer;
-      let buildingSymbol;
-
-      if (sketchViewModel.updateGraphics.length) {
-
-        const updateGraphic = sketchViewModel.updateGraphics.at(0);
-        sketchViewModel.complete();
-
-        buildingSymbol = updateGraphic.symbol.clone();
-        buildingSymbolLayer = buildingSymbol.symbolLayers.at(0);
-        buildingSymbolLayer.resource.href = modelUrl;
-
-        updateGraphic.symbol = buildingSymbol;
-        sketchViewModel.update(updateGraphic);
-
-      } else {
-
-        buildingSymbolLayer = new ObjectSymbol3DLayer({
-          anchor: 'relative',
-          anchorPosition: {x: 0, y: 0, z: -0.5},
-          height: initialSize,
-          resource: {href: modelUrl}
-        });
-
-        buildingSymbol = {
-          type: "point-3d",
-          symbolLayers: [buildingSymbolLayer]
-        };
-
-      }
-
-      sketchViewModel.pointSymbol = buildingSymbol;
-    });
-
-    const modelLocationBtn = document.getElementById('model-location-btn');
-    modelLocationBtn.addEventListener('click', () => {
-      const active = modelLocationBtn.toggleAttribute('active');
-      modelLocationBtn.setAttribute('appearance', active ? 'solid' : 'outline-fill');
-      view.container.style.cursor = active ? 'pointer' : 'default';
-      if (active) {
-        sketchViewModel.create("point");
-      }
-    });
-
-    sketchViewModel.on("create", (event) => {
-      if (event.state === "complete") {
-        view.container.style.cursor = 'default';
-        modelLocationBtn.setAttribute('appearance', 'outline-fill');
-        sketchViewModel.update(event.graphic);
-        updateBuildingsFilter();
-      }
-    });
-    sketchViewModel.on("update", (event) => {
-      if (event.state === "complete") {
-        updateBuildingsFilter();
-      } else {
-        if (event.toolEventInfo && event.toolEventInfo.type.includes("stop")) {
-          updateBuildingsFilter();
-        }
-      }
-    });
-
-  }
-
-  /**
-   *
-   * @return {Promise<void>}
-   */
-
-  /*async initializeObstructions({view, existingView, proposedView}) {
-
-   const Mesh = await $arcgis.import("esri/geometry/Mesh");
-   const Graphic = await $arcgis.import("esri/Graphic");
-   const obstructionGraphic = new Graphic({
-   symbol: {
-   type: "mesh-3d",
-   symbolLayers: [
-   {
-   type: "fill",
-   material: {color: "rgba(217,24,62,0.5)"},
-   edges: {type: "solid", color: '#ff0000', size: 2.0}
-   }
-   ]
-   }
-   });
-
-   const GraphicsLayer = await $arcgis.import("esri/layers/GraphicsLayer");
-   const obstructionsLayer = new GraphicsLayer({title: 'Obstructions', graphics: [obstructionGraphic]});
-   view.map.add(obstructionsLayer);
-
-   obstructionsLayer.on('layerview-create', (evt) => {
-   evt.layerView.visible = (evt.view !== existingView);
-   });
-
-   const buildingsLayer = view.map.layers.find(l => l.title === 'Buildings');
-   await buildingsLayer.load();
-   const buildingsLayerView = await view.whenLayerView(buildingsLayer);
-
-   this.selectBuilding = async ({mapPoint}) => {
-
-   const {extent: buildingExtent} = await buildingsLayerView.queryExtent({geometry: mapPoint});
-   if (buildingExtent) {
-   const {center, width, height, zmin, zmax} = buildingExtent;
-
-   const location = center.clone();
-   location.z = zmin;
-
-   obstructionGraphic.geometry = Mesh.createBox(location, {
-   size: {
-   width: width,
-   depth: height,
-   height: (zmax - zmin) * 3.0
-   }
-   });
-   }
-   };
-
-   let clickHandle;
-
-   const selectObstructionBtn = document.createElement('calcite-button');
-   selectObstructionBtn.innerText = 'Set Proposed Building';
-   selectObstructionBtn.setAttribute('icon-start', 'number-circle-1');
-   selectObstructionBtn.setAttribute('appearance', 'outline-fill');
-   selectObstructionBtn.setAttribute('scale', 'l');
-   selectObstructionBtn.toggleAttribute('round', true);
-   view.ui.add(selectObstructionBtn, 'top-right');
-
-   selectObstructionBtn.addEventListener('click', () => {
-   const active = selectObstructionBtn.toggleAttribute('active');
-   selectObstructionBtn.setAttribute('appearance', active ? 'solid' : 'outline-fill');
-   view.container.style.cursor = active ? 'pointer' : 'default';
-   clickHandle?.remove();
-   if (active) {
-   clickHandle = reactiveUtils.on(() => view, 'click', clickEvt => {
-   this.selectBuilding(clickEvt);
-   });
-   }
-   });
-
-   }*/
 
   /**
    *
@@ -518,9 +283,8 @@ class Application extends AppBase {
 
     const updateViews = () => {
       if (analysisView.selectedViewshed) {
-        const goToParams = {
-          position: analysisView.selectedViewshed.observer, heading: analysisView.selectedViewshed.heading, tilt: analysisView.selectedViewshed.tilt
-        };
+        const {observer: position, heading, tilt} = analysisView.selectedViewshed;
+        const goToParams = {position, heading, tilt};
         existingView.goTo(goToParams, {animate: false});
         proposedView.goTo(goToParams, {animate: false});
       }
@@ -539,18 +303,21 @@ class Application extends AppBase {
           item.toggleAttribute('selected', false);
         });
       }
+      this.dispatchEvent(new CustomEvent('viewshed-selection-change', {detail: {hasSelectedViewshed: analysisView.selectedViewshed}}));
     });
 
     const geodesicUtils = await $arcgis.import("esri/geometry/support/geodesicUtils");
     const Point = await $arcgis.import("esri/geometry/Point");
 
     const getHeading = (location) => {
-      const {azimuth} = geodesicUtils.geodesicDistance(new Point([location.longitude, location.latitude]), new Point([view.camera.position.longitude, view.camera.position.latitude]));
+      const {azimuth} = geodesicUtils.geodesicDistance(
+        new Point([location.longitude, location.latitude]),
+        new Point([view.camera.position.longitude, view.camera.position.latitude]));
       return azimuth;
     };
 
     const _defaultObserverOffset = 1.6;
-    const _defaultFarDistance = 200;
+    const _defaultFarDistance = 150;
     const _defaultTilt = 85.0;
     const _defaultFOV = view.camera.fov;
 
@@ -582,6 +349,8 @@ class Application extends AppBase {
 
       clickHandle?.remove();
       if (active) {
+        this.dispatchEvent(new CustomEvent('viewshed-selection-change', {detail: {hasSelectedViewshed: true}}));
+
         clickHandle = reactiveUtils.on(() => view, 'click', clickEvt => {
           _createViewshed({location: clickEvt.mapPoint});
         });
@@ -594,6 +363,197 @@ class Application extends AppBase {
         location: feature.geometry,
         name: feature.attributes.Match_addr
       });
+    });
+
+    this.addEventListener('building-update-start', ({detail: {}}) => {
+      analysisView.selectedViewshed = null;
+    });
+
+    this.addEventListener('side-panel-change', ({detail: {toggleId, active}}) => {
+      if (toggleId === 'viewshed' && active) {
+        if (itemByViewshed.size === 1) {
+          analysisView.selectedViewshed = itemByViewshed.keys().next().value;
+        }
+      }
+    });
+
+  }
+
+  /**
+   *
+   * @param view
+   * @param existingView
+   * @param proposedView
+   * @return {Promise<void>}
+   */
+  async initializeBuildingModelPlacement({view, existingView, proposedView}) {
+
+    const initialSize = 10.0;
+
+    const buildingsLayer = view.map.layers.find(l => l.title === 'Buildings');
+    await buildingsLayer.load();
+
+    const SceneFilter = await $arcgis.import("esri/layers/support/SceneFilter");
+    const geometryEngine = await $arcgis.import("esri/geometry/geometryEngine");
+
+    const updateBuildingsFilter = () => {
+
+      const sketchAreas = sketchLayer.graphics.map((graphic) => {
+        const location = graphic.geometry;
+        const symbolLayer = graphic.symbol.symbolLayers.at(0);
+        const {width, depth} = symbolLayer;
+        const distance = (width && depth) ? Math.max(width, depth) : initialSize;
+        return geometryEngine.geodesicBuffer(location, distance * 0.5, 'meters');
+      });
+
+      buildingsLayer.filter = new SceneFilter({
+        geometries: sketchAreas,
+        spatialRelationship: 'disjoint'
+      });
+    };
+
+    const Graphic = await $arcgis.import("esri/Graphic");
+    let sketchGraphic = new Graphic({
+      geometry: {
+        type: 'point',
+        spatialReference: view.spatialReference,
+        x: -13634342.551704712,
+        y: 4558603.511751686,
+        z: 2.192722893320024
+      }
+    });
+
+    const GraphicsLayer = await $arcgis.import("esri/layers/GraphicsLayer");
+    const sketchLayer = new GraphicsLayer({
+      title: 'Sketch Layer',
+      elevationInfo: {mode: 'relative-to-ground'},
+      graphics: [sketchGraphic]
+    });
+    view.map.add(sketchLayer);
+
+    sketchLayer.on('layerview-create', (evt) => {
+      evt.layerView.visible = (evt.view !== existingView);
+    });
+
+    const SketchViewModel = await $arcgis.import("esri/widgets/Sketch/SketchViewModel");
+    const sketchViewModel = new SketchViewModel({view: view, layer: sketchLayer});
+
+    const ObjectSymbol3DLayer = await $arcgis.import("esri/symbols/ObjectSymbol3DLayer");
+
+    this.addEventListener('model-selected', ({detail: {modelUrl}}) => {
+
+      let buildingSymbolLayer;
+      let buildingSymbol;
+
+      if (sketchGraphic.symbol) {
+
+        buildingSymbol = sketchGraphic.symbol.clone();
+        buildingSymbolLayer = buildingSymbol.symbolLayers.at(0);
+        buildingSymbolLayer.resource.href = modelUrl;
+
+      } else {
+
+        buildingSymbolLayer = new ObjectSymbol3DLayer({
+          anchor: 'relative',
+          anchorPosition: {x: 0, y: 0, z: -0.5},
+          height: initialSize,
+          resource: {href: modelUrl}
+        });
+        buildingSymbol = {
+          type: "point-3d",
+          symbolLayers: [buildingSymbolLayer]
+        };
+
+      }
+
+      sketchGraphic.symbol = buildingSymbol;
+      sketchViewModel.pointSymbol = buildingSymbol;
+      sketchViewModel.update(sketchGraphic);
+      updateBuildingsFilter();
+
+    });
+
+    this.addEventListener('side-panel-change', ({detail: {toggleId, active}}) => {
+      if (toggleId === 'models' && active) {
+        sketchViewModel.update(sketchGraphic);
+        updateBuildingsFilter();
+      } else {
+        sketchViewModel.cancel();
+      }
+    });
+
+    sketchViewModel.on("update", (event) => {
+      if (event.state === "complete") {
+        updateBuildingsFilter();
+      } else {
+        if (event.toolEventInfo && event.toolEventInfo.type.includes("stop")) {
+          updateBuildingsFilter();
+        }
+      }
+    });
+
+    sketchViewModel.on("delete", (event) => {
+      sketchGraphic = event.graphics.at(0).clone();
+      sketchLayer.add(sketchGraphic);
+      sketchViewModel.update(sketchGraphic);
+      updateBuildingsFilter();
+    });
+
+    reactiveUtils.when(() => sketchViewModel.updateGraphics.length, () => {
+      this.dispatchEvent(new CustomEvent('building-update-start', {detail: {}}));
+    });
+
+    this.addEventListener('viewshed-selection-change', ({detail: {hasSelectedViewshed}}) => {
+      hasSelectedViewshed && sketchViewModel.cancel();
+    });
+
+  }
+
+  /**
+   *
+   * @param view
+   * @return {Promise<void>}
+   */
+  async initializeBuildingModelsList({view}) {
+
+    const {
+      THUMBNAIL_BASE_URL,
+      MODEL_BASE_URL,
+      modelInfos
+    } = buildingModelInfos;
+
+    const modelsList = document.getElementById('models-list');
+
+    const modelSelected = ({model}) => {
+      const modelUrl = `${ MODEL_BASE_URL }${ model }`;
+      this.dispatchEvent(new CustomEvent('model-selected', {detail: {modelUrl}}));
+    };
+
+    modelInfos.forEach(({thumb, model}, key) => {
+
+      const modelCard = document.createElement('calcite-card');
+      modelCard.setAttribute('thumbnail-position', 'block-end');
+
+      const heading = document.createElement('div');
+      heading.innerText = key;
+      heading.setAttribute('slot', 'heading');
+      modelCard.appendChild(heading);
+
+      const thumbnail = document.createElement('img');
+      thumbnail.setAttribute('slot', 'thumbnail');
+      thumbnail.setAttribute('src', `${ THUMBNAIL_BASE_URL }${ thumb }`);
+      modelCard.append(thumbnail);
+
+      modelCard.addEventListener('calciteCardSelect', () => {
+        modelSelected({model});
+      });
+
+      if (key.includes('01')) {
+        modelCard.toggleAttribute('selected', true);
+        modelSelected({model});
+      }
+
+      modelsList.append(modelCard);
     });
 
   }

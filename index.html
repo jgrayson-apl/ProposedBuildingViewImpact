@@ -17,8 +17,8 @@
     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>-->
     
     <!-- CALCITE -->
-    <script type="module" src="https://js.arcgis.com/calcite-components/2.11.1/calcite.esm.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.11.1/calcite.css"/>
+    <script type="module" src="https://js.arcgis.com/calcite-components/2.12.0/calcite.esm.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.12.0/calcite.css"/>
     
     <!-- ArcGIS API for JavaScript-->
     <link href="https://js.arcgis.com/4.30/@arcgis/core/assets/esri/themes/light/main.css" rel="stylesheet"/>
@@ -47,20 +47,13 @@
         <calcite-action-bar id="side-panel-action-bar" slot="action-bar">
           <calcite-action text="Buildings" title="building models" icon="locator" class="toggle-action" data-toggle="models" active></calcite-action>
           <calcite-action text="Viewsheds" title="create viewshed" icon="viewshed" class="toggle-action" data-toggle="viewshed"></calcite-action>
-          
           <calcite-action-group slot="actions-end">
             <calcite-action text="Map" title="map" icon="map" class="toggle-action" data-toggle="map"></calcite-action>
             <calcite-action text="Places" title="places" icon="bookmark" class="toggle-action" data-toggle="places" hidden></calcite-action>
           </calcite-action-group>
-        
         </calcite-action-bar>
         
-        <calcite-panel heading="Buildings" class="toggle-panel" data-toggle="models">
-          
-          <calcite-label layout="inline" style="margin:8px;--calcite-label-margin-bottom:0;">
-            <calcite-button id="model-location-btn" icon-start="map-pin" appearance="outline-fill" style="width:100%;">set map location</calcite-button>
-            <calcite-button id="model-clear-btn" icon-end="trash" appearance="outline-fill" disabled></calcite-button>
-          </calcite-label>
+        <calcite-panel heading="Proposed Building" class="toggle-panel" data-toggle="models">
           
           <calcite-panel>
             <calcite-card-group id="models-list" selection-mode="single-persist"></calcite-card-group>
@@ -69,14 +62,13 @@
           <div slot="footer">
             Building models from <a href="https://www.kenney.nl/assets/" target="_blank">Kenney game assets</a> under <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank">CC0 1.0 Universal</a>.
           </div>
-        
         </calcite-panel>
         
         <calcite-panel heading="Viewsheds" class="toggle-panel" data-toggle="viewshed" hidden>
           
           <calcite-label layout="inline" style="margin:8px;--calcite-label-margin-bottom:0;">
             <calcite-button id="viewshed-add-btn" icon-start="map-pin" appearance="outline-fill" style="width:100%;">set map location</calcite-button>
-            <calcite-button id="viewshed-clear-btn" icon-end="trash" appearance="outline-fill" disabled></calcite-button>
+            <!--<calcite-button id="viewshed-clear-btn" icon-end="trash" appearance="outline-fill" disabled></calcite-button>-->
           </calcite-label>
           
           <calcite-list id="viewsheds-list" selection-mode="single-persist" selection-appearance="border"></calcite-list>
@@ -98,7 +90,6 @@
         <calcite-panel id="places-panel" heading="Places" class="toggle-panel" data-toggle="places" hidden>
           <div id="places-container"></div>
         </calcite-panel>
-      
       
       </calcite-shell-panel>
       

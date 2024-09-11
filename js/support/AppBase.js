@@ -188,6 +188,8 @@ class AppBase extends AppConfig {
       });
       // SIDE PANEL //
       sidePanel.collapsed = !active;
+
+      this.dispatchEvent(new CustomEvent('side-panel-change', {detail: {toggleId, active}}));
     };
 
     // TOGGLE SIDE PANELS //
