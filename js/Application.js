@@ -374,6 +374,7 @@ class Application extends AppBase {
         location: feature.geometry,
         name: feature.attributes.Match_addr
       });
+
     });
 
     this.addEventListener('building-update-start', ({detail: {}}) => {
@@ -381,7 +382,7 @@ class Application extends AppBase {
     });
 
     this.addEventListener('side-panel-change', ({detail: {toggleId, active}}) => {
-      if (toggleId === 'viewshed' && active) {
+      if ((toggleId === 'viewshed') && active) {
         if (itemByViewshed.size === 1) {
           analysisView.selectedViewshed = itemByViewshed.keys().next().value;
         }
