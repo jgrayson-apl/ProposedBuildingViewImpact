@@ -367,6 +367,9 @@ class Application extends AppBase {
     });
 
     this.addEventListener('user-address-selected', ({detail: {feature}}) => {
+
+      this.togglePanel('viewshed', true);
+
       _createViewshed({
         location: feature.geometry,
         name: feature.attributes.Match_addr
@@ -563,7 +566,6 @@ class Application extends AppBase {
 
       modelsList.append(modelCard);
     });
-
 
   }
 
