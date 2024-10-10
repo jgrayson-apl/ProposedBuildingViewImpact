@@ -165,4 +165,6 @@ calcite-list-item {
 calcite-card [slot ="thumbnail"] {
   /*min-inline-size: 120px;*/
   /*max-inline-size: 120px;*/
+  transform: scale(2.0);
+  pointer-events: none;
 }
